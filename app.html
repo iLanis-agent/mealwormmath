@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mealworm math - honest colony arithmetic</title>
+<style>
+:root{--bg:#f5f2ea;--card:#fff;--ink:#29241a;--mut:#6f6a5c;--tl:#7a5c2e;--ok:#e3f1e4;--oktx:#1e6b34;--bad:#fbe4e0;--badtx:#a03423;--info:#eae4f5;--infotx:#4b3a78}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:26px 16px 60px}
+.hero{max-width:760px;margin:8px auto 22px;text-align:center}
+.hero p{color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.card h2{margin:0 0 12px;font-size:17px}
+label{display:block;font-size:13px;color:var(--mut);margin-top:10px}
+input{width:100%;padding:10px;border:1px solid #d8d2c2;border-radius:8px;font-size:15px;margin-top:3px}
+button{margin-top:14px;width:100%;padding:11px;border:0;border-radius:9px;background:var(--tl);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.big{font-size:34px;font-weight:700;margin:14px 0 2px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:10px}
+.pill{display:inline-block;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:600;margin:6px 0}
+.pill.ok{background:var(--ok);color:var(--oktx)}
+.pill.bad{background:var(--bad);color:var(--badtx)}
+.pill.info{background:var(--info);color:var(--infotx)}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px}
+td{padding:7px 0;border-bottom:1px solid #eee6d4}
+td:last-child{text-align:right;font-weight:600}
+.note{font-size:12.5px;color:var(--mut);margin-top:14px}
+.err{color:var(--badtx);font-weight:600;margin-top:10px}
+a{color:var(--tl)}
+</style>
+</head>
+<body>
+<main>
+<div class="hero">
+<p>The videos say "buy 1,000 worms and you're set." They skip the 12-week pipeline, the trays of larvae, and the harvest gap between your starter and its grandchildren. Run the honest arithmetic.</p>
+</div>
+<div class="grid">
+<div class="card">
+<h2>Your target</h2>
+<label>Harvest goal (grams per week)</label>
+<input id="p_g" type="number" value="100" min="0">
+<button id="p_go">Compute the plan</button>
+<div class="big" id="p_worms">-</div>
+<div class="sub">harvest-size larvae per week</div>
+<div id="p_verdict"></div>
+<table>
+<tr><td>beetles to keep breeding</td><td id="p_beetles">-</td></tr>
+<tr><td>larvae in the pipeline</td><td id="p_pipe">-</td></tr>
+<tr><td>trays of larvae</td><td id="p_trays">-</td></tr>
+</table>
+</div>
+<div class="card">
+<h2>Your starter box</h2>
+<label>Worms you bought</label>
+<input id="s_n" type="number" value="1000" min="0">
+<button id="s_go">Grade the starter</button>
+<div class="big" id="s_cap">-</div>
+<div class="sub">grams per week at steady state</div>
+<div id="s_verdict"></div>
+<table>
+<tr><td>beetles expected</td><td id="s_beetles">-</td></tr>
+<tr><td>trays for that capacity</td><td id="s_trays">-</td></tr>
+<tr><td>first harvest of the starter</td><td id="s_first">-</td></tr>
+</table>
+</div>
+<div class="card">
+<h2>The honest timeline</h2>
+<label>Starter size (worms)</label>
+<input id="t_n" type="number" value="1000" min="0">
+<button id="t_go">Build the timeline</button>
+<table>
+<tr><td>week 0</td><td>bins set, starter in</td></tr>
+<tr><td id="t_first">-</td><td>first harvest of bought worms</td></tr>
+<tr><td id="t_gap">-</td><td>the gap nobody mentions</td></tr>
+<tr><td id="t_next">-</td><td>next generation reaches size</td></tr>
+</table>
+<div id="t_pill"></div>
+<div class="note" id="t_save"></div>
+</div>
+</div>
+<p class="note">Biology constants (0.11 g per larva, 40% egg-to-harvest survival, 25 eggs per female per week, 12-week pipeline, 1,500 per tray) are representative midpoints of published mealworm-farming guidance - labeled, not promises. Temperature, feed and luck move the real numbers. <a href="/">Why this exists</a></p>
+</main>
+<script src="engine.js?v=1"></script>
+<script>
+function num(id){return parseFloat(document.getElementById(id).value);}
+function show(id,txt){document.getElementById(id).textContent=txt;}
+function pill(id,cls,txt){document.getElementById(id).innerHTML='<span class="pill '+cls+'">'+txt+'</span>';}
+function err(el,msg){show(el,'');document.getElementById(el).innerHTML='<p class="err">'+msg+'</p>';}
+document.getElementById('p_go').onclick=function(){
+  try{
+    const r=Mealwormmath.plan(num('p_g'));
+    show('p_worms',r.wormsPerWeek.toLocaleString());
+    pill('p_verdict','info',r.verdict);
+    show('p_beetles',r.beetles.toLocaleString());
+    show('p_pipe',r.pipelineLarvae.toLocaleString());
+    show('p_trays',r.trays.toLocaleString());
+  }catch(e){err('p_verdict',e.message);show('p_worms','-');show('p_beetles','-');show('p_pipe','-');show('p_trays','-');}
+};
+document.getElementById('s_go').onclick=function(){
+  try{
+    const r=Mealwormmath.starter(num('s_n'));
+    show('s_cap',r.capacityGPerWeek.toLocaleString());
+    pill('s_verdict','ok',r.verdict);
+    show('s_beetles',r.beetles.toLocaleString());
+    show('s_trays',r.capacityTrays.toLocaleString());
+    show('s_first','week '+r.firstHarvestWeek);
+  }catch(e){err('s_verdict',e.message);show('s_cap','-');show('s_beetles','-');show('s_trays','-');show('s_first','-');}
+};
+document.getElementById('t_go').onclick=function(){
+  try{
+    const r=Mealwormmath.timeline(num('t_n'));
+    show('t_first','week '+r.firstHarvestWeek);
+    show('t_gap','weeks '+r.gapStartWeek+'-'+r.gapEndWeek);
+    show('t_next','week '+r.nextGenWeek);
+    pill('t_pill','bad',r.note);
+    show('t_save','Hold back about '+r.saveForBreeding.toLocaleString()+' worms ('+Math.round(Mealwormmath.constants.SAVE_SHARE*100)+'% of the starter) as breeding stock so the gap fills.');
+  }catch(e){err('t_pill',e.message);show('t_first','-');show('t_gap','-');show('t_next','-');show('t_save','');}
+};
+</script>
+</body>
+</html>
